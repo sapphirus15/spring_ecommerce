@@ -14,7 +14,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>1.2.5.RELEASE</version>
+    <version>1.4.0.RELEASE</version>
     <relativePath /> <!-- lookup parent from repository -->
   </parent>
 
@@ -33,10 +33,13 @@
     <jdbc.version>${mysql.version}</jdbc.version>
     <jdbc.driverClassName>com.mysql.jdbc.Driver</jdbc.driverClassName>
     <jdbc.url><![CDATA[jdbc:mysql://${db.address}/${db.name}?createDatabaseIfNotExist=true]]></jdbc.url>
-    <querydsl.version>3.6.7</querydsl.version>
+    <!-- <jdbc.url>jdbc:mysql://${db.address}/${db.name}?createDatabaseIfNotExist=true</jdbc.url> -->
+    <!-- <querydsl.version>3.6.7</querydsl.version> -->
+    <querydsl.version>4.1.4</querydsl.version>
     <poi.version>3.8</poi.version>
     <commons-lang3.version>3.4</commons-lang3.version>
-    <config.storage.path>C:/ecommerce/workspace/ecommerce_new/storage</config.storage.path>
+    <!-- <config.storage.path>D:/dev-ecommerce/workspace/ecommerce/storage</config.storage.path> -->
+    <config.storage.path>C:/ecommerce/workspace/ecommerce/storage</config.storage.path>
   </properties>
 
   <dependencies>
@@ -83,19 +86,30 @@
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
-      <version>1.16.8</version>
-    </dependency>
+      </dependency>
+	<!--
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security</artifactId>
     </dependency>
-    <dependency>
+     <dependency>
       <groupId>com.mysema.querydsl</groupId>
       <artifactId>querydsl-jpa</artifactId>
       <version>${querydsl.version}</version>
     </dependency>
     <dependency>
       <groupId>com.mysema.querydsl</groupId>
+      <artifactId>querydsl-apt</artifactId>
+      <version>${querydsl.version}</version>
+    </dependency>
+    -->
+    <dependency>
+      <groupId>com.querydsl</groupId>
+      <artifactId>querydsl-jpa</artifactId>
+      <version>${querydsl.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.querydsl</groupId>
       <artifactId>querydsl-apt</artifactId>
       <version>${querydsl.version}</version>
     </dependency>
@@ -133,6 +147,10 @@
       <artifactId>scala-library</artifactId>
       <version>2.10.4</version>
     </dependency>
+    <dependency>
+    	<groupId>org.springframework.boot</groupId>
+    	<artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
@@ -145,7 +163,8 @@
         <artifactId>apt-maven-plugin</artifactId>
         <version>1.1.3</version>
         <configuration>
-          <processor>com.mysema.query.apt.jpa.JPAAnnotationProcessor</processor>
+          <!-- <processor>com.mysema.query.apt.jpa.JPAAnnotationProcessor</processor> -->
+          <processor>com.querydsl.apt.jpa.JPAAnnotationProcessor</processor>
         </configuration>
         <executions>
           <execution>
@@ -181,6 +200,80 @@
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
+        <artifactId>sql-maven-plugin</artifactId>
+        <version>1.5</version>
+        <dependencies>
+          <dependency>
+            <groupId>${jdbc.groupId}</groupId>
+            <artifactId>${jdbc.artifactId}</artifactId>
+            <version>${jdbc.version}</version>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <driver>${jdbc.driverClassName}</driver>
+          <url>${jdbc.url}</url>
+          <username>${jdbc.username}</username>
+          <password>${jdbc.password}</password>
+          <skip>${dbdrop.skip}</skip>
+        </configuration>
+        <executions>
+          <execution>
+            <id>drop-db-before-test-if-any</id>
+            <phase>process-test-resources</phase>
+            <goals>
+              <goal>execute</goal>
+            </goals>
+            <configuration>
+              <autocommit>true</autocommit>
+              <sqlCommand>drop database ${db.name}</sqlCommand>
+              <onError>continue</onError>
+            </configuration>
+          </execution>
+          <execution>
+            <id>create-db</id>
+            <phase>process-test-resources</phase>
+            <goals>
+              <goal>execute</goal>
+            </goals>
+            <configuration>
+              <autocommit>true</autocommit>
+              <sqlCommand>create database ${db.name}</sqlCommand>
+              <onError>continue</onError>
+            </configuration>
+          </execution>
+          <execution>
+            <id>create-schema</id>
+            <phase>process-test-resources</phase>
+            <goals>
+              <goal>execute</goal>
+            </goals>
+            <configuration>
+              <autocommit>true</autocommit>
+              <srcFiles>
+                <srcFile>target/schema.sql</srcFile>
+              </srcFiles>
+              <onError>continue</onError>
+            </configuration>
+          </execution>
+          <!-- data.sql 실행  -->
+          <execution>
+          	<id>data</id>
+          	<phase>process-test-resources</phase>
+          	<goals>
+          		<goal>execute</goal>
+          	</goals>
+          	<configuration>
+          		<autocommit>true</autocommit>
+          		<scrFiles>
+          			<srcFile>src/test/resources/data.sql</srcFile>
+          		</scrFiles>
+          		<onErr>continue</onErr>
+          	</configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
         <artifactId>dbunit-maven-plugin</artifactId>
         <version>1.0-beta-3</version>
         <configuration>
@@ -201,7 +294,8 @@
             </goals>
             <configuration>
               <type>CLEAN_INSERT</type>
-              <src>target/test-classes/sample-data.xml</src>
+              <!-- <src>target/test-classes/sample-data.xml</src> -->
+              <src>src/test/resources/sample-data.xml</src>
             </configuration>
           </execution>
         </executions>
@@ -241,12 +335,8 @@
                 <pluginExecution>
                   <pluginExecutionFilter>
                     <groupId>de.juplo</groupId>
-                    <artifactId>
-                      hibernate4-maven-plugin
-                    </artifactId>
-                    <versionRange>
-                      [1.1.0,)
-                    </versionRange>
+                    <artifactId>hibernate4-maven-plugin</artifactId>
+                    <versionRange>[1.1.0,)</versionRange>
                     <goals>
                       <goal>export</goal>
                     </goals>
